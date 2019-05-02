@@ -1,4 +1,4 @@
-./src/persist/sqlite/stores/
-./src/reports/output/
+src/persist/sqlite/stores/
+src/reports/output/
 
 node_modules/
