@@ -1,0 +1,1 @@
+export { default as SqlitePersist } from './sqlite/sqlitePersist';
