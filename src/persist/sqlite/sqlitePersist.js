@@ -87,7 +87,7 @@ export default class SqlitePersist {
                     return err;
                 }
             });
-            console.log(`Row inserted: ${listTxs.length}`);
+            console.log(`Transaction report results inserted: ${listTxs.length}`);
             return listTxs;
         } catch (err) {
             console.log(err);
