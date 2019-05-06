@@ -17,6 +17,11 @@ To run analyze with default block range (7000 blocks) and get reports:
 npm run start
 ```
 
+To clean all DB and start:
+```
+npm run start-clean
+```
+
 To run analyze from last block, which is saved in DB, to latest block:
 ```
 npm run start-from-last-block

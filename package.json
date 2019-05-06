@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "babel-node ./src/index.js",
     "start-from-last-block": "FROM_LAST_BLOCK=true babel-node ./src/index.js",
+    "start-clean": "npm run clean-db && npm run start",
     "clean-db": "CLEAN_DB=all babel-node ./src/index.js",
     "clean-last-block": "CLEAN_DB=lastBlock babel-node ./src/index.js",
     "export": "EXPORT=true babel-node ./src/index.js"
