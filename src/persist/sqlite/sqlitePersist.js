@@ -54,12 +54,12 @@ export default class SqlitePersist {
 
 
     async insertTransaction(tx) {
-        const { hash, timeStamp, walletID, issues } = tx;
+        const { hash, timeStamp, walletId, issues } = tx;
 
         try {
             const stmt = this.db.prepare("REPLACE INTO transactions(txHash, timestamp, walletId, issues) VALUES (?,?,?,?)");
             let issueString = Object.keys(issues).map(key => item.issues[key]).join(', ');
-            stmt.run(hash, timeStamp, walletID, issueString);
+            stmt.run(hash, timeStamp, walletId, issueString);
             stmt.finalize();
 
             return tx;
@@ -78,7 +78,7 @@ export default class SqlitePersist {
                 let issueString = Object.keys(item.issues).map(key => item.issues[key]).join(', ');
 
                 return [
-                    item.hash, item.timeStamp, item.walletID, issueString
+                    item.hash, item.timeStamp, item.walletId, issueString
                 ];
             });
             const flattenParams = _.flatten(params);

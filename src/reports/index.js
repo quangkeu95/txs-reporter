@@ -1,2 +1,2 @@
-export { default as XlsxReporter } from "./xlsx";
 export { default as ExcelReporter } from "./excel";
+export { default as TxtReporter } from "./txt";

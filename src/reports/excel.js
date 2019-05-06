@@ -31,7 +31,7 @@ export default class ExcelReporter {
         this.workbook = new Excel.Workbook();
     }
 
-    async appendFailedResults(data, sheetName = "Reverted Transactions") {
+    async appendResults(data, sheetName = "Reverted Transactions") {
         const sheet = this.workbook.addWorksheet(sheetName);
 
         sheet.columns = [

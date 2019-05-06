@@ -307,13 +307,13 @@ export default class EtherscanEndpoint {
             const destAddress = exactData[3].value;
             const maxDestAmount = exactData[4].value;
             const minConversionRate = exactData[5].value;
-            const walletID = exactData[6].value;
+            const walletId = exactData[6].value;
     
             const reserves = await this.getListReserve();
     
             const input = {
                 ...tx,
-                source, sourceAmount, dest, destAddress, maxDestAmount, minConversionRate, walletID, reserves
+                source, sourceAmount, dest, destAddress, maxDestAmount, minConversionRate, walletId, reserves
             }
     
             const issues = await this.debug(this, input);

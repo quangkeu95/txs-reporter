@@ -1,23 +1,25 @@
-import Web3 from "web3";
 import _ from "lodash";
-import * as constants from "./constants";
 import log from "./log";
 import path from "path";
+import ora from "ora";
+import Table from "cli-table";
 
+import * as constants from "./constants";
 import * as endpoints from "./endpoints";
 import * as persist from "./persist";
-import * as converter from "./utils/converter";
 import * as common from "./utils/common";
-import { ExcelReporter } from "./reports";
-import ora from 'ora';
+import * as reporter from "./reports";
 
-const outputFile = path.join(__dirname, "reports/output/txs-report.xlsx");
+
+const excelOutputFile = path.join(__dirname, "reports/output/txs-report.xlsx");
+const txtOutputFile = path.join(__dirname, "reports/output/txs-report.txt");
 
 class MainExecutor {
     constructor() {
         this.etherscanEndpoint = new endpoints.EtherscanEndpoint();
         this.sqlitePersist = new persist.SqlitePersist();
-        this.excelReporter = new ExcelReporter();
+        this.excelReporter = new reporter.ExcelReporter();
+        this.txtReporter = new reporter.TxtReporter();
     }
 
     async cleanDb(persist, mode) {
@@ -35,7 +37,7 @@ class MainExecutor {
         }
     }
 
-    async exportData(reporter, data) {
+    async exportData(reporter, data, outputFile) {
         const exportData = data.map(item => {
             return {
                 txHash: item.txHash,
@@ -46,7 +48,7 @@ class MainExecutor {
         });
     
         try {
-            await reporter.appendFailedResults(exportData);
+            await reporter.appendResults(exportData);
             log(`Export finish! Output file path: ${outputFile}`);
         } catch (err) {
             console.log(err);
@@ -61,6 +63,22 @@ class MainExecutor {
             console.log(err);
             throw new Error(err);
         }
+    }
+
+    logResults(data) {
+        const table = new Table({
+            head: ['Tx Hash', 'Timestamp', 'Wallet ID', 'Issues'],
+        });
+
+        const rows = data.map(item => {
+            let issueString = Object.keys(item.issues).map(key => item.issues[key]).join(', ');
+            return [item.hash, common.timestampToDatetime(item.timeStamp), item.walletId, issueString];
+        });
+
+        table.push(...rows);
+        
+        log("Results: ");
+        console.log(table.toString());
     }
 
     async run() {
@@ -84,8 +102,8 @@ class MainExecutor {
             const lastBlockNumber = await this.sqlitePersist.getLastBlock();
 
             let startBlockNumber = lastBlockNumber;
-            if (lastBlockNumber === 0 || lastBlockNumber === null) {
-                startBlockNumber = latestBlockNumber - 6000;
+            if (lastBlockNumber === 0 || lastBlockNumber === null || process.env.FROM_LAST_BLOCK !== 'true') {
+                startBlockNumber = latestBlockNumber - constants.BLOCK_RANGE;
             }
 
             const allTxs = await this.etherscanEndpoint.getAllTransactionsToKyber(startBlockNumber, latestBlockNumber);
@@ -103,6 +121,8 @@ class MainExecutor {
 
             spinner.succeed(`Filter error tradeWithHint transactions: ${tradeWithHintIssues.length}`);
 
+            this.logResults(tradeWithHintIssues);
+
             if (tradeWithHintIssues.length > 0) {
                 await this.saveResults(this.sqlitePersist, tradeWithHintIssues);
             }
@@ -112,8 +132,10 @@ class MainExecutor {
     
             // Export data
             const allResults = await this.sqlitePersist.getAllTransactions();
-        
-            this.exportData(this.excelReporter, allResults);
+
+            // Columns: txHash, timestamp, walletId, issues
+            this.exportData(this.excelReporter, allResults, excelOutputFile);
+            this.exportData(this.txtReporter, allResults, txtOutputFile);
         } catch (err) {
             console.log(err);
         }

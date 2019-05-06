@@ -2,6 +2,7 @@ export const KYBER_NETWORK_CONTRACT_ABI = [{"constant":false,"inputs":[{"name":"
 export const KYBER_NETWORK_PROXY_CONTRACT_ADDRESS = "0x818E6FECD516Ecc3849DAf6845e3EC868087B755";
 export const INFURA_ENDPOINT = "https://mainnet.infura.io/v3/318bec50f1e043f2ac54e85b7c5872ad";
 export const RESERVES = "0x63825c174ab367968ec60f061753d3bbd36a0d8f";
+export const BLOCK_RANGE = 7000;
 
 export const CONNECTION_TIMEOUT = 10000;
 
