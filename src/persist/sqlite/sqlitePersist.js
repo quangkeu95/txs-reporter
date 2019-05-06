@@ -24,19 +24,20 @@ export default class SqlitePersist {
         // } else {
             this.db = new sqlite3.Database(dbFile);
             this.db.serialize(() => {
-                this.initTransactionTable();
                 this.initConfigureTable();
+                this.initTransactionTable();
             });
         // }
     }
 
     initTransactionTable() {
         this.db.run("CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY, txHash TEXT UNIQUE, timestamp INT, walletId TEXT, issues TEXT)");
-        log("Init Transaction Table");
+        log("Init Transaction table");
     }
 
     async initConfigureTable() {
         this.db.run("CREATE TABLE IF NOT EXISTS configure (id INTEGER PRIMARY KEY, lastBlock INTEGER)");
+        log("Init Configure table");
 
         try {
             const lastBlock = await this.getLastBlock();
@@ -47,18 +48,18 @@ export default class SqlitePersist {
             }
         } catch (err) {
             console.log(err);
+            throw new Error(err);
         }
-        log("Init Configure Table");
     }
 
 
     async insertTransaction(tx) {
-        const { hash, timestamp, walletID, issues } = tx;
+        const { hash, timeStamp, walletID, issues } = tx;
 
         try {
             const stmt = this.db.prepare("REPLACE INTO transactions(txHash, timestamp, walletId, issues) VALUES (?,?,?,?)");
             let issueString = Object.keys(issues).map(key => item.issues[key]).join(', ');
-            stmt.run(hash, timestamp, walletID, issueString);
+            stmt.run(hash, timeStamp, walletID, issueString);
             stmt.finalize();
 
             return tx;
@@ -77,7 +78,7 @@ export default class SqlitePersist {
                 let issueString = Object.keys(item.issues).map(key => item.issues[key]).join(', ');
 
                 return [
-                    item.hash, item.timestamp, item.walletID, issueString
+                    item.hash, item.timeStamp, item.walletID, issueString
                 ];
             });
             const flattenParams = _.flatten(params);

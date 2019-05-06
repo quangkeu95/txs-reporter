@@ -3,6 +3,7 @@ import _ from "lodash";
 import * as constants from "../constants";
 import abiDecoder from "abi-decoder";
 import * as converter from "../utils/converter";
+const async = require("async");
 
 export default class InfuraEndpoint {
     constructor() {
@@ -63,18 +64,41 @@ export default class InfuraEndpoint {
         }
     }
 
-    async getAllTransactionsInRange(startBlockNumber, endBlockNumber) {
-        const queue = [];
-        try {
-            for (let i = startBlockNumber; i <= endBlockNumber; i++) {
-                queue.push(this.getAllTransactionsInBlock(i));
-            }
-            const result = await Promise.all(queue);
-            return _.flatten(result);
-        } catch (err) {
-            console.log(err);
-            return err;
-        }
+    getAllTransactionsInRange(startBlockNumber, endBlockNumber, limit = 100) {
+        const rangeBlock = _.range(startBlockNumber, endBlockNumber);
+
+        return new Promise((resolve, reject) => {
+            async.mapLimit(rangeBlock, limit, (blockNumber, callback) => {
+                this.getAllTransactionsInBlock(blockNumber).then(response => {
+                    callback(null, response);
+                }, err => {
+                    callback(err, null);
+                });
+            }, (err, results) => {
+                if (err) {
+                    console.log(err);
+                    reject(err);
+                }
+                resolve(_.flatten(results));
+            });
+        });
+    }
+    
+    getAllTransactionsToKyber(startBlockNumber, endBlockNumber) {
+        return new Promise((resolve, reject) => {
+            this.getAllTransactionsInRange(startBlockNumber, endBlockNumber).then(response => {
+                const allTxsToKyber = response.filter(item => {
+                    if (item && item.to) {
+                        return item.to === constants.KYBER_NETWORK_PROXY_CONTRACT_ADDRESS;
+                    }
+                    return false;
+                });
+                resolve(allTxsToKyber);
+            }, err => {
+                console.log(err);
+                reject(err);
+            });
+        });
     }
 
     async getAllTransactionsInRangeWithBatch(startBlockNumber, endBlockNumber) {
