@@ -359,7 +359,7 @@ export default class EtherscanEndpoint {
             const gasCap = ethereum.wrapperGetGasCap(blockNumber);
     
             if(!isError || isError == "1"){
-                if(gas != 0 && (gasUsed/gas >= 0.95)){
+                if(gas != 0 && (gasUsed/gas >= 0.9)){
                     networkIssues["gas_used"] = "Your transaction is run out of gas";
                 }
             }

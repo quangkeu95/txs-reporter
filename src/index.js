@@ -3,6 +3,7 @@ import log from "./log";
 import path from "path";
 import ora from "ora";
 import Table from "cli-table";
+import fs from "fs";
 
 import * as constants from "./constants";
 import * as endpoints from "./endpoints";
@@ -13,6 +14,7 @@ import * as reporter from "./reports";
 
 const excelOutputFile = path.join(__dirname, "reports/output/txs-report.xlsx");
 const txtOutputFile = path.join(__dirname, "reports/output/txs-report.txt");
+const dbFile = path.join(__dirname, "persist/sqlite/stores/sqlite3.db");
 
 class MainExecutor {
     constructor() {
@@ -25,8 +27,16 @@ class MainExecutor {
     async cleanDb(persist, mode) {
         try {
             if (mode === 'all') {
-                await persist.deleteLastBlockRecord();
-                await persist.deleteAllTxRecords();
+                if (fs.existsSync(dbFile)) {
+                    fs.unlink(dbFile, (err) => {
+                        if (err) {
+                            console.log("Remove DB file error");
+                            console.log(err);
+                        }
+                    })
+                }
+                // await persist.deleteLastBlockRecord();
+                // await persist.deleteAllTxRecords();
             } else if (mode === 'lastBlock') {
                 await persist.deleteLastBlockRecord();
             }
