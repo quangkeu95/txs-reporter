@@ -38,6 +38,7 @@ export default class ExcelReporter {
             { header: "Tx Hash", key: 'txHash', width: 60 },
             { header: "Timestamp", key: 'timestamp', width: 20 },
             { header: "Wallet ID", key: 'walletId', width: 40 },
+            { header: "Method", key: 'method', width: 15},
             { header: "Issues", key: 'issues', width: 120 }
         ];
 

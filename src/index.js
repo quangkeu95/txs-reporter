@@ -43,6 +43,7 @@ class MainExecutor {
                 txHash: item.txHash,
                 timestamp: common.timestampToDatetime(item.timestamp),
                 walletId: item.walletId,
+                method: item.method,
                 issues: item.issues
             }
         });
@@ -67,12 +68,12 @@ class MainExecutor {
 
     logResults(data) {
         const table = new Table({
-            head: ['Tx Hash', 'Timestamp', 'Wallet ID', 'Issues'],
+            head: ['Tx Hash', 'Timestamp', 'Wallet ID', 'Method', 'Issues'],
         });
 
         const rows = data.map(item => {
             let issueString = Object.keys(item.issues).map(key => item.issues[key]).join(', ');
-            return [item.hash, common.timestampToDatetime(item.timeStamp), item.walletId, issueString];
+            return [item.hash, common.timestampToDatetime(item.timeStamp), item.walletId, item.method, issueString];
         });
 
         table.push(...rows);
@@ -110,21 +111,20 @@ class MainExecutor {
             
             const spinner = ora('Filter error transactions').start();
             const errorTxs = this.etherscanEndpoint.filterErrorTransactions(allTxs);
-            spinner.succeed(`Filter error transactions: ${errorTxs.length}`);
 
             const results = await this.etherscanEndpoint.analyzeTxList(errorTxs);
 
-            const tradeWithHintIssues = results.filter(item => {
+            const tradeIssues = results.filter(item => {
                 if (item) return true;
                 return false;
             });
 
-            spinner.succeed(`Filter error tradeWithHint transactions: ${tradeWithHintIssues.length}`);
+            spinner.succeed(`Filter trade error transactions: ${tradeIssues.length}`);
 
-            this.logResults(tradeWithHintIssues);
+            this.logResults(tradeIssues);
 
-            if (tradeWithHintIssues.length > 0) {
-                await this.saveResults(this.sqlitePersist, tradeWithHintIssues);
+            if (tradeIssues.length > 0) {
+                await this.saveResults(this.sqlitePersist, tradeIssues);
             }
     
             // Save last block number

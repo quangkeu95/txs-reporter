@@ -16,6 +16,8 @@ export default class EtherscanEndpoint {
         this.web3 = new Web3(new Web3.providers.HttpProvider(constants.INFURA_ENDPOINT, constants.CONNECTION_TIMEOUT));
         this.networkContract = new this.web3.eth.Contract(constants.KYBER_NETWORK_CONTRACT_ABI, constants.KYBER_NETWORK_PROXY_CONTRACT_ADDRESS);
         this.erc20Contract = new this.web3.eth.Contract(constants.ERC20_CONTRACT_ABI);
+
+        this.addAbiDecoder();
     }
 
     getLatestBlockNumber() {
@@ -179,13 +181,21 @@ export default class EtherscanEndpoint {
         });
     }
 
-    getRateAtSpecificBlock(source, dest, srcAmount, blockno) {
-        //special handle for official reserve
-        const mask = converter.maskNumber();
-        let srcAmountEnableFistBit = converter.sumOfTwoNumber(srcAmount,  mask);
-        srcAmountEnableFistBit = converter.toHex(srcAmountEnableFistBit);
+    getRateAtSpecificBlock(source, dest, srcAmount, blockno, method, hint) {
+        let data;
+        const permHint = this.web3.utils.utf8ToHex(constants.PERM_HINT);
+        if (method === "tradeWithHint" && hint === permHint) {
 
-        const data = this.networkContract.methods.getExpectedRate(source, dest, srcAmountEnableFistBit).encodeABI();
+            //special handle for official reserve
+            const mask = converter.maskNumber();
+            let srcAmountEnableFistBit = converter.sumOfTwoNumber(srcAmount,  mask);
+            srcAmountEnableFistBit = converter.toHex(srcAmountEnableFistBit);
+
+            data = this.networkContract.methods.getExpectedRate(source, dest, srcAmountEnableFistBit).encodeABI();
+        } else if (method === "trade") {
+            data = this.networkContract.methods.getExpectedRate(source, dest, converter.toHex(srcAmount)).encodeABI();
+        }
+
         // const hexBlockNo = converter.toHex(blockno);
         // const url = `https://api.etherscan.io/api?module=proxy&action=eth_call&to=${this.networkAddress}&data=${data}&tag=${hexBlockNo}&apikey=${constants.ETHERSCAN_API_KEY}`;
 
@@ -200,16 +210,16 @@ export default class EtherscanEndpoint {
                             expectedPrice: "0",
                             slippagePrice: "0"
                         });
+                    } else {
+                        const rates = this.web3.eth.abi.decodeParameters([{
+                            type: 'uint256',
+                            name: 'expectedPrice'
+                        }, {
+                            type: 'uint256',
+                            name: 'slippagePrice'
+                        }], result);
+                        resolve(rates);
                     }
-        
-                    const rates = this.web3.eth.abi.decodeParameters([{
-                        type: 'uint256',
-                        name: 'expectedPrice'
-                    }, {
-                        type: 'uint256',
-                        name: 'slippagePrice'
-                    }], result);
-                    resolve(rates);
                 } else {
                     reject(null);
                 }
@@ -220,19 +230,20 @@ export default class EtherscanEndpoint {
         });
     }
 
+    addAbiDecoder() {
+        const tradeAbi = this.getAbiByName("trade", constants.KYBER_NETWORK_CONTRACT_ABI);
+        const tradeWithHintAbi = this.getAbiByName("tradeWithHint", constants.KYBER_NETWORK_CONTRACT_ABI);
+
+        abiDecoder.addABI(tradeAbi);
+        abiDecoder.addABI(tradeWithHintAbi);
+    }
+
     exactTradeData(data) {
         return new Promise((resolve, reject) => {
             try {
-                //get trade abi from 
-                const tradeAbi = this.getAbiByName("tradeWithHint", constants.KYBER_NETWORK_CONTRACT_ABI);
-                //  console.log(tradeAbi)
-                if (!tradeAbi) resolve(null);
-                abiDecoder.addABI(tradeAbi)
-                //  console.log(abiDecoder)
                 const decoded = abiDecoder.decodeMethod(data);
-                    //  console.log(decoded)
                 if (decoded) {
-                    resolve(decoded.params);
+                    resolve(decoded);
                 } else {
                     resolve(null);
                 }
@@ -296,11 +307,21 @@ export default class EtherscanEndpoint {
             if (!tx.input) {
                 return null;
             }
-            const exactData = await this.exactTradeData(tx.input);
-            if (exactData === null) {
-                // Only filter transaction which has tradeWithHint method, otherwise return 
+
+            let exactData;
+            let method = "";
+            const tradeData = await this.exactTradeData(tx.input);
+            if (tradeData === null) {
                 return null;
+            } else {
+                if (tradeData.name === "trade") {
+                    method = "trade";
+                } else if (tradeData.name === "tradeWithHint") {
+                    method = "tradeWithHint";
+                }
+                exactData = tradeData.params;
             }
+            
             const source = exactData[0].value;
             const sourceAmount = exactData[1].value;
             const dest = exactData[2].value;
@@ -308,12 +329,16 @@ export default class EtherscanEndpoint {
             const maxDestAmount = exactData[4].value;
             const minConversionRate = exactData[5].value;
             const walletId = exactData[6].value;
+            const hint = method === "tradeWithHint" ? exactData[7].value : null;
     
             const reserves = await this.getListReserve();
     
             const input = {
                 ...tx,
-                source, sourceAmount, dest, destAddress, maxDestAmount, minConversionRate, walletId, reserves
+                source, sourceAmount, dest, destAddress, maxDestAmount, minConversionRate, walletId, reserves, method
+            }
+            if (hint) {
+                input.hint = hint;
             }
     
             const issues = await this.debug(this, input);
@@ -329,7 +354,7 @@ export default class EtherscanEndpoint {
 
     async debug (ethereum, input) {
         const networkIssues = {};
-        const { blockNumber, isError, gas, gasPrice, gasUsed, source, sourceAmount, dest, destAmount, from, value, reserves, minConversionRate } = input;
+        const { blockNumber, isError, gas, gasPrice, gasUsed, source, sourceAmount, dest, destAmount, from, value, reserves, minConversionRate, method, hint } = input;
         try {
             const gasCap = ethereum.wrapperGetGasCap(blockNumber);
     
@@ -371,7 +396,7 @@ export default class EtherscanEndpoint {
                 // }
             }
 
-            const rates = await ethereum.getRateAtSpecificBlock(source, dest, sourceAmount, blockNumber);
+            const rates = await ethereum.getRateAtSpecificBlock(source, dest, sourceAmount, blockNumber, method, hint);
             if (converter.compareTwoNumber(rates.expectedPrice, 0) === 0) {
                 const reasons = await ethereum.wrapperGetReasons(reserves[0], input, blockNumber);
                 networkIssues["rateError"] = reasons;

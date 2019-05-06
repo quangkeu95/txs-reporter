@@ -16,9 +16,12 @@ export default class TxtReporter {
     appendResults(data) {
         const writeStream = fs.createWriteStream(outputFile);
 
+        // Insert header
+        writeStream.write("TxHash, Timestamp, WalletId, Method, Issues \n");
+
         data.forEach(item => {
             writeStream.write([
-               item.txHash, item.timestamp, item.walletId, item.issues 
+               item.txHash, item.timestamp, item.walletId, item.method, item.issues 
             ].join(', ') + '\n');
         });
 

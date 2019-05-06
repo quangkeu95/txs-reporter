@@ -31,7 +31,7 @@ export default class SqlitePersist {
     }
 
     initTransactionTable() {
-        this.db.run("CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY, txHash TEXT UNIQUE, timestamp INT, walletId TEXT, issues TEXT)");
+        this.db.run("CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY, txHash TEXT UNIQUE, timestamp INT, walletId TEXT, method TEXT, issues TEXT)");
         log("Init Transaction table");
     }
 
@@ -54,12 +54,12 @@ export default class SqlitePersist {
 
 
     async insertTransaction(tx) {
-        const { hash, timeStamp, walletId, issues } = tx;
+        const { hash, timeStamp, walletId, method, issues } = tx;
 
         try {
-            const stmt = this.db.prepare("REPLACE INTO transactions(txHash, timestamp, walletId, issues) VALUES (?,?,?,?)");
+            const stmt = this.db.prepare("REPLACE INTO transactions(txHash, timestamp, walletId, method, issues) VALUES (?,?,?,?,?)");
             let issueString = Object.keys(issues).map(key => item.issues[key]).join(', ');
-            stmt.run(hash, timeStamp, walletId, issueString);
+            stmt.run(hash, timeStamp, walletId, method, issueString);
             stmt.finalize();
 
             return tx;
@@ -70,15 +70,15 @@ export default class SqlitePersist {
     }
 
     async insertMultipleTransactions(listTxs) {
-        const placeholders = listTxs.map(item => '(?,?,?,?)').join(',');
-        const sql = `REPLACE INTO transactions(txHash, timestamp, walletId, issues) VALUES ${placeholders}`;
+        const placeholders = listTxs.map(item => '(?,?,?,?,?)').join(',');
+        const sql = `REPLACE INTO transactions(txHash, timestamp, walletId, method, issues) VALUES ${placeholders}`;
 
         try {
             const params = listTxs.map(item => {
                 let issueString = Object.keys(item.issues).map(key => item.issues[key]).join(', ');
 
                 return [
-                    item.hash, item.timeStamp, item.walletId, issueString
+                    item.hash, item.timeStamp, item.walletId, item.method, issueString
                 ];
             });
             const flattenParams = _.flatten(params);
