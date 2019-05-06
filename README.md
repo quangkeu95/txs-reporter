@@ -41,3 +41,7 @@ npm run export
 SQLite3 is used in this project. There are just 2 tables: **configure** and **transactions**.
 - Configure table contains the last block number we run the analysis.
 - Transactions table contains records which were error transactions and the reason why they were reverted.
+
+## TODO
+- [ ] Refactor, improve Infura Endpoint.
+- [ ] Add web server to serve requests.
