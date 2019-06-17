@@ -41,6 +41,32 @@ export default class EtherscanEndpoint {
         });
     }
 
+    getSingleTransactionToKyber(txHash) {
+        const spinner = ora(`Fetch transaction hash: ${txHash}`);
+
+        return new Promise((resolve, reject) => {
+            this.web3.eth.getTransaction(txHash)
+                .then(response => {
+                    this.web3.eth.getBlock(response.blockNumber, false, (err, result) => {
+                        if (err) {
+                            spinner.fail('Error fetching transaction');
+                            console.log(err);
+                            reject(err)
+                        } else {
+                            spinner.info(`Tx Hash: ${txHash}`);
+                            spinner.succeed(`Transaction fetching successfully`);
+                            resolve({
+                                ...response,
+                                timeStamp: result.timestamp
+                            });
+                        }
+                    });
+                }).catch(err => {
+                    reject(err);
+                })
+        });
+    }
+
     getAllTransactionsToKyber(startBlockNumber, endBlockNumber, limit = 3) {
         const step = 500;
 

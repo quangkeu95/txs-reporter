@@ -92,8 +92,23 @@ class MainExecutor {
         console.log(table.toString());
     }
 
+    async analyzeSingleTx(txHash) {
+        const tx = await this.etherscanEndpoint.getSingleTransactionToKyber(txHash);
+        
+        const results = await this.etherscanEndpoint.analyzeTxList([tx]);
+        this.logResults(results);
+    }
+
     async run() {
         try {
+            if (process.env.ANALYZE === "true") {
+                if (process.argv.slice(2).length > 0) {
+                    const txHash = process.argv[2];
+                    this.analyzeSingleTx(txHash);
+                    return;
+                }
+            }
+
             if (process.env.CLEAN_DB === 'all' || process.env.CLEAN_DB === "lastBlock") {
                 const result = await this.cleanDb(this.sqlitePersist, process.env.CLEAN_DB);
                 if (result === true) {

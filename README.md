@@ -42,6 +42,11 @@ To get transaction records from DB and export (Make sure your transaction table 
 npm run export
 ```
 
+To analyze single transaction by transaction hash:
+```
+npm run analyze <tx hash>
+```
+
 ## Storage
 SQLite3 is used in this project. There are just 2 tables: **configure** and **transactions**.
 - Configure table contains the last block number we run the analysis.
