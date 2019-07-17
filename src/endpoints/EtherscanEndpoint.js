@@ -44,7 +44,7 @@ export default class EtherscanEndpoint {
     getSingleTransactionToKyber(txHash) {
         const spinner = ora(`Fetch transaction hash: ${txHash}`);
 
-        return new Promise((resolve, reject) => {
+        const result = new Promise((resolve, reject) => {
             this.web3.eth.getTransaction(txHash)
                 .then(response => {
                     this.web3.eth.getBlock(response.blockNumber, false, (err, result) => {
@@ -64,6 +64,19 @@ export default class EtherscanEndpoint {
                 }).catch(err => {
                     reject(err);
                 })
+        });
+
+        return new Promise((resolve, reject) => {
+            result.then(res => {
+                this.web3.eth.getTransactionReceipt(txHash).then(response => {
+                    resolve({
+                        ...res,
+                        gasUsed: response.gasUsed
+                    })
+                });
+            }).catch(err => {
+                reject(err);
+            });
         });
     }
 
